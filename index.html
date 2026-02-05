@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Monitoring Tiket</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    padding: 30px;
+  }
+
+  .container {
+    max-width: 1300px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+  }
+
+  h1 { text-align: center; margin-bottom: 20px; }
+
+  .form-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  input, select, button {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+  }
+
+  .btn-pilih { background: #2196f3; color: #fff; }
+  .btn-simpan { background: #4caf50; color: #fff; }
+  .btn-edit { background: #ffc107; }
+  .btn-hapus { background: #f44336; color: #fff; }
+
+  .kategori-box { margin-bottom: 15px; }
+
+  .kategori-item {
+    display: inline-block;
+    background: #e3f2fd;
+    padding: 5px 10px;
+    margin: 3px;
+    border-radius: 15px;
+    font-size: 13px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  th { background: #f0f0f0; }
+  tfoot td { font-weight: bold; background: #fafafa; }
+
+  .btn-kategori {
+    background:#e0e0e0;
+    border:none;
+    padding:6px 10px;
+    margin:3px;
+    cursor:pointer;
+    border-radius:4px;
+  }
+
+  .btn-kategori:hover {
+    background:#90caf9;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Monitoring Tiket</h1>
+
+  <input type="hidden" id="editId">
+
+  <div class="form-group">
+    <input type="text" id="noTiket" placeholder="Nomor Tiket">
+
+    <select id="kategori">
+      <option value="">-- Pilih Kategori --</option>
+      <option>Open</option>
+      <option>Comment</option>
+      <option>Field Work</option>
+      <option>WFR</option>
+      <option>Solved</option>
+      <option>Closed</option>
+      <option>FCR</option>
+      <option>FCR Irisan</option>
+    </select>
+
+    <button class="btn-pilih" onclick="pilihKategori()">Pilih Kategori</button>
+    <button class="btn-simpan" onclick="simpanTiket()">Simpan</button>
+    <button class="btn-hapus" onclick="hapusSemuaData()" >Hapus Semua Data</button>
+    <input
+  type="text"
+  id="searchTicket"
+  placeholder="Cari nomor tiket..."
+  style="margin-bottom:10px; width:250px"
+  oninput="searchTiket()"
+/>
+
+
+</div>
+
+  <div class="kategori-box">
+    <strong>Kategori Terpilih:</strong>
+    <span id="kategoriTerpilih">-</span>
+  </div>
+
+  <button class="btn-pilih" style="margin-bottom:10px" onclick="copyAllTiket()">
+  Copy All Ticket
+</button>
+
+
+  <table>
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nomor Tiket</th>
+        <th>Open</th>
+        <th>Comment</th>
+        <th>Field Work</th>
+        <th>WFR</th>
+        <th>Solved</th>
+        <th>Closed</th>
+        <th>FCR</th>
+        <th>FCR Irisan</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="tabelTiket"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">TOTAL</td>
+        <td id="countOpen">0</td>
+        <td id="countComment">0</td>
+        <td id="countField Work">0</td>
+        <td id="countWFR">0</td>
+        <td id="countSolved">0</td>
+        <td id="countClosed">0</td>
+        <td id="countFCR">0</td>
+        <td id="countFCR Irisan">0</td>
+        <td>-</td>
+      </tr>
+    </tfoot>
+  </table>
+  <h3>View Tiket Berdasarkan Kategori</h3>
+
+<div id="kategoriButtons" style="margin-bottom:15px;"></div>
+<button id="btnUnview" class="btn-hapus" style="display:none; margin-bottom:15px;"
+  onclick="unviewKategori()">
+  Tutup View Kategori
+</button>
+
+<button class="btn-pilih" style="margin-bottom:15px; display:none"
+  id="btnCopyView" onclick="copyViewKategori()">
+  Copy Ticket (View Kategori)
+</button>
+
+
+<table id="viewTable" style="display:none">
+  <thead>
+    <tr>
+      <th>No</th>
+      <th>Nomor Tiket</th>
+      <th>Kategori</th>
+    </tr>
+  </thead>
+  <tbody id="viewBody"></tbody>
+</table>
+</div>
+
+<script>
+  const STORAGE_KEY = 'monitoring_tiket_data'
+
+  const kategoriList = [
+    "Open","Comment","Field Work","WFR",
+    "Solved","Closed","FCR","FCR Irisan"
+  ]
+
+  let tiket = {}
+  let index = 1
+  let kategoriTerpilih = []
+  let searchKeyword = ''
+
+
+  /* ================= LOCAL STORAGE ================= */
+
+  function saveToStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tiket, index }))
+  }
+
+  function loadFromStorage() {
+    const data = localStorage.getItem(STORAGE_KEY)
+    if (data) {
+      const parsed = JSON.parse(data)
+      tiket = parsed.tiket || {}
+      index = parsed.index || 1
+      tampilkanData()
+    }
+  }
+
+  /* ================= VALIDASI ================= */
+
+  function isNomorTiketExist(noTiket, excludeId = null) {
+    for (let id in tiket) {
+      if (tiket[id].noTiket === noTiket && id != excludeId) {
+        return true
+      }
+    }
+    return false
+  }
+
+  /* ================= CRUD ================= */
+
+  function pilihKategori() {
+    const val = document.getElementById('kategori').value
+    if (!val) return alert('Pilih kategori')
+
+    if (!kategoriTerpilih.includes(val)) {
+      kategoriTerpilih.push(val)
+    }
+    renderKategori()
+  }
+
+  function renderKategori() {
+    const box = document.getElementById('kategoriTerpilih')
+    box.innerHTML = kategoriTerpilih.length === 0
+      ? '-'
+      : kategoriTerpilih.map(k => `<span class="kategori-item">${k}</span>`).join('')
+  }
+
+  function hapusSemuaData() {
+  if (!confirm('PERINGATAN!\nSemua data tiket akan dihapus permanen. Lanjutkan?')) {
+    return
+  }
+
+  tiket = {}
+  index = 1
+  kategoriTerpilih = []
+
+  localStorage.removeItem(STORAGE_KEY)
+
+  resetForm()
+  tampilkanData()
+}
+
+
+  function simpanTiket() {
+    const noTiket = document.getElementById('noTiket').value.trim()
+    const editId = document.getElementById('editId').value
+
+    if (!noTiket || kategoriTerpilih.length === 0) {
+      return alert('Nomor tiket dan kategori wajib diisi')
+    }
+
+    if (isNomorTiketExist(noTiket, editId || null)) {
+      return alert('Nomor tiket sudah ada')
+    }
+
+    if (editId) {
+      tiket[editId] = { noTiket, kategori: [...kategoriTerpilih] }
+      document.getElementById('editId').value = ''
+    } else {
+      tiket[index++] = { noTiket, kategori: [...kategoriTerpilih] }
+    }
+
+    saveToStorage()
+    resetForm()
+    tampilkanData()
+  }
+
+  function editTiket(id) {
+    document.getElementById('editId').value = id
+    document.getElementById('noTiket').value = tiket[id].noTiket
+    kategoriTerpilih = [...tiket[id].kategori]
+    renderKategori()
+  }
+
+  function hapusTiket(id) {
+    if (confirm('Hapus tiket ini?')) {
+      delete tiket[id]
+      saveToStorage()
+      tampilkanData()
+    }
+  }
+
+  function resetForm() {
+    document.getElementById('noTiket').value = ''
+    kategoriTerpilih = []
+    renderKategori()
+  }
+
+  function tampilkanData() {
+  const tbody = document.getElementById('tabelTiket')
+  tbody.innerHTML = ''
+
+  const counter = {}
+  kategoriList.forEach(k => counter[k] = 0)
+
+  let no = 1
+  for (let id in tiket) {
+
+    // FILTER SEARCH
+    if (
+      searchKeyword &&
+      !tiket[id].noTiket.toLowerCase().includes(searchKeyword)
+    ) {
+      continue
+    }
+
+    tiket[id].kategori.forEach(k => counter[k]++)
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${no++}</td>
+        <td>${tiket[id].noTiket}</td>
+        ${kategoriList.map(k =>
+          `<td>${tiket[id].kategori.includes(k) ? '✔' : ''}</td>`
+        ).join('')}
+        <td>
+          <button class="btn-edit" onclick="editTiket(${id})">Edit</button>
+          <button class="btn-hapus" onclick="hapusTiket(${id})">Hapus</button>
+        </td>
+      </tr>
+    `
+  }
+
+  kategoriList.forEach(k => {
+    document.getElementById('count' + k).innerText = counter[k]
+  })
+}
+
+
+  /* ================= INIT ================= */
+  loadFromStorage()
+  renderKategoriButtons()
+
+  /* ========== VIEW BY KATEGORI ========== */
+
+function renderKategoriButtons() {
+  const container = document.getElementById('kategoriButtons')
+  container.innerHTML = ''
+
+  kategoriList.forEach(k => {
+    const btn = document.createElement('button')
+    btn.className = 'btn-kategori'
+    btn.innerText = k
+    btn.onclick = () => viewByKategori(k)
+    container.appendChild(btn)
+  })
+}
+
+function viewByKategori(kategori) {
+  const table = document.getElementById('viewTable')
+  const body = document.getElementById('viewBody')
+  const btnUnview = document.getElementById('btnUnview')
+  const btnCopyView = document.getElementById('btnCopyView')
+
+  body.innerHTML = ''
+  let no = 1
+
+  for (let id in tiket) {
+    if (tiket[id].kategori.includes(kategori)) {
+      body.innerHTML += `
+        <tr>
+          <td>${no++}</td>
+          <td>${tiket[id].noTiket}</td>
+          <td>${tiket[id].kategori.join(', ')}</td>
+        </tr>
+      `
+    }
+  }
+
+  table.style.display = 'table'
+    btnUnview.style.display = 'inline-block'
+    btnCopyView.style.display = 'inline-block'
+}
+
+function unviewKategori() {
+  const table = document.getElementById('viewTable')
+  const body = document.getElementById('viewBody')
+  const btnUnview = document.getElementById('btnUnview')
+  const btnCopyView = document.getElementById('btnCopyView')
+
+  table.style.display = 'none'
+  body.innerHTML = ''
+  btnUnview.style.display = 'none'
+  btnCopyView.style.display = 'none'
+
+  // reset highlight tombol kategori
+  document.querySelectorAll('.btn-kategori')
+    .forEach(btn => btn.classList.remove('active'))
+}
+
+function copyAllTiket() {
+  if (Object.keys(tiket).length === 0) {
+    return alert('Tidak ada data untuk disalin')
+  }
+
+  let text = ''
+
+  for (let id in tiket) {
+    text += tiket[id].noTiket + '\n'
+  }
+
+  navigator.clipboard.writeText(text.trim())
+    .then(() => alert('Nomor tiket berhasil disalin'))
+}
+
+
+function copyViewKategori() {
+  const rows = document.querySelectorAll('#viewBody tr')
+
+  if (rows.length === 0) {
+    return alert('Tidak ada data untuk disalin')
+  }
+
+  let text = ''
+
+  rows.forEach(row => {
+    const nomorTiket = row.children[1].innerText
+    text += nomorTiket + '\n'
+  })
+
+  navigator.clipboard.writeText(text.trim())
+    .then(() => alert('Nomor tiket (view kategori) berhasil disalin'))
+}
+
+function searchTiket() {
+  searchKeyword = document
+    .getElementById('searchTicket')
+    .value
+    .toLowerCase()
+
+  tampilkanData()
+}
+
+
+</script>
+
+</body>
+</html>
