@@ -163,7 +163,24 @@
   </table>
   <h3>View Tiket Berdasarkan Kategori</h3>
 
-<div id="kategoriButtons" style="margin-bottom:15px;"></div>
+<div style="margin-bottom:15px; display:flex; gap:10px; align-items:center;">
+  <select id="viewKategoriSelect">
+    <option value="">-- Pilih Kategori --</option>
+    <option>Open</option>
+    <option>Comment</option>
+    <option>Field Work</option>
+    <option>WFR</option>
+    <option>Solved</option>
+    <option>Closed</option>
+    <option>FCR</option>
+    <option>FCR Irisan</option>
+  </select>
+
+  <button class="btn-pilih" onclick="viewByKategoriDropdown()">
+    View
+  </button>
+</div>
+
 <button id="btnUnview" class="btn-hapus" style="display:none; margin-bottom:15px;"
   onclick="unviewKategori()">
   Tutup View Kategori
@@ -451,6 +468,16 @@ function searchTiket() {
     .toLowerCase()
 
   tampilkanData()
+}
+
+function viewByKategoriDropdown() {
+  const kategori = document.getElementById('viewKategoriSelect').value
+
+  if (!kategori) {
+    return alert('Silakan pilih kategori terlebih dahulu')
+  }
+
+  viewByKategori(kategori)
 }
 
 
