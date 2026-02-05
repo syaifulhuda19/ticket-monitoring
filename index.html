@@ -81,6 +81,21 @@
   .btn-kategori:hover {
     background:#90caf9;
   }
+
+  .kategori-item {
+  display: inline-flex;
+  align-items: center;
+  background: #e3f2fd;
+  padding: 5px 10px;
+  margin: 3px;
+  border-radius: 15px;
+  font-size: 13px;
+}
+
+.kategori-item span:hover {
+  opacity: 0.7;
+}
+
 </style>
 </head>
 <body>
@@ -257,12 +272,33 @@
     renderKategori()
   }
 
-  function renderKategori() {
-    const box = document.getElementById('kategoriTerpilih')
-    box.innerHTML = kategoriTerpilih.length === 0
-      ? '-'
-      : kategoriTerpilih.map(k => `<span class="kategori-item">${k}</span>`).join('')
+function renderKategori() {
+  const box = document.getElementById('kategoriTerpilih')
+
+  if (kategoriTerpilih.length === 0) {
+    box.innerHTML = '-'
+    return
   }
+
+  box.innerHTML = kategoriTerpilih.map((k, i) => `
+    <span class="kategori-item">
+      ${k}
+      <span
+        style="margin-left:6px; cursor:pointer; color:red; font-weight:bold"
+        onclick="hapusKategori(${i})"
+        title="Batalkan kategori"
+      >
+        ✖
+      </span>
+    </span>
+  `).join('')
+}
+
+function hapusKategori(index) {
+  kategoriTerpilih.splice(index, 1)
+  renderKategori()
+}
+
 
   function hapusSemuaData() {
   if (!confirm('PERINGATAN!\nSemua data tiket akan dihapus permanen. Lanjutkan?')) {
